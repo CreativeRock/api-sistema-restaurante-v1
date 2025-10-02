@@ -1,0 +1,12 @@
+#Logs
+/logs/*
+
+#Public
+public/debug.txt
+
+#Tests
+test-conexiondb.php
+src/Utils/Debug.php
+
+#Composer
+/vendor/*
