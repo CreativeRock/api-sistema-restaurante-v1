@@ -45,15 +45,34 @@ class BaseController
         return is_numeric($id) && $id > 0;
     }
 
+    protected function isValidMesaId($id)
+    {
+        return is_numeric($id) && $id > 0;
+    }
+
     protected function validateTime($time)
     {
         $dateTimeObject = \DateTime::createFromFormat('H:i:s', $time);
         return $dateTimeObject && $dateTimeObject->format('H:i:s') === $time;
     }
 
-    protected function validateDate($date)
+    protected function validateDate($date, $format = 'Y-m-d')
     {
-        $dateTimeObject = \DateTime::createFromFormat('Y-m-d', $date);
-        return $dateTimeObject && $dateTimeObject->format('Y-m-d') === $date;
+        $d = \DateTime::createFromFormat($format, $date);
+        return $d && $d->format($format) === $date;
+    }
+
+    //Validar múltiples formatos
+    protected function validateDateMultiple($date)
+    {
+        $formats = ['Y-m-d', 'Y/m/d', 'd-m-Y', 'd/m/Y', 'm-d-Y', 'm/d/Y'];
+
+        foreach ($formats as $format) {
+            if ($this->validateDate($date, $format)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
