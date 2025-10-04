@@ -3,48 +3,64 @@
 // Configurar sesiones seguras
 ini_set('session.cookie_httponly', 1);
 ini_set('session.use_strict_mode', 1);
+ini_set('session.cookie_samesite', 'None'); // Importante para CORS con credenciales
+ini_set('session.cookie_secure', 0); // 0 para desarrollo local, 1 para producción
 
-// Al inicio del archivo, después de los headers
-error_log("REQUEST_URI: " . $_SERVER['REQUEST_URI']);
-error_log("REQUEST_METHOD: " . $_SERVER['REQUEST_METHOD']);
+// Lista de orígenes permitidos
+$allowed_origins = [
+    'http://localhost:4200',
+    'http://127.0.0.1:4200',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173'
+];
 
-//manejar CORS y OPTIONS
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+
+// Headers CORS - DEBEN ir al inicio, antes de cualquier output
+if (in_array($origin, $allowed_origins)) {
+    header("Access-Control-Allow-Origin: $origin");
+} else {
+    // Para desarrollo, puedes permitir el origen actual como fallback
+    header("Access-Control-Allow-Origin: http://localhost:4200");
+}
+
+header("Access-Control-Allow-Credentials: true");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS, PATCH");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-XSRF-TOKEN, Accept, Origin");
+header("Access-Control-Expose-Headers: Authorization");
+header("Access-Control-Max-Age: 86400"); // 24 horas
+
+// Manejar preflight (OPTIONS) requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    header('Access-Control-Allow-Origin: http://localhost:');
-    header('Access-Control-Allow-Credentials: true');
-    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-    header('Access-Control-Max-Age: 3600');
     http_response_code(200);
     exit();
 }
 
-//configurar headers para requests normales
-header('Access-Control-Allow-Origin: http://localhost:4200');
-header('Access-Control-Allow-Credentials: true');
+// Configuración de headers para requests normales
 header('Content-Type: application/json; charset=utf-8');
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
+// Iniciar sesión DESPUÉS de los headers CORS
+if (session_status() === PHP_SESSION_NONE) {
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'domain' => 'localhost',
+        'secure' => false, // false para desarrollo local
+        'httponly' => true,
+        'samesite' => 'None'
+    ]);
+    session_start();
 }
 
+// Log para debugging
+error_log("=== NUEVA REQUEST ===");
+error_log("URI: " . $_SERVER['REQUEST_URI']);
+error_log("METHOD: " . $_SERVER['REQUEST_METHOD']);
+error_log("ORIGIN: " . ($_SERVER['HTTP_ORIGIN'] ?? 'No origin'));
+error_log("SESSION ID: " . (session_id() ?: 'No session'));
+error_log("CLIENTE ID EN SESSION: " . ($_SESSION['cliente_id'] ?? 'No cliente'));
+
 require_once __DIR__ . '/../vendor/autoload.php';
-//// require_once __DIR__ . '/../src/Config/Database.php';
-//// require_once __DIR__ . '/../src/Routes/Router.php';
-//// require_once __DIR__ . '/../src/Controllers/BaseController.php';
-
-// //Controladores
-//// require_once __DIR__ . '/../src/Controllers/ClienteController.php';
-//// require_once __DIR__ . '/../src/Controllers/AuthController.php';
-//// require_once __DIR__ . '/../src/Controllers/UsuarioController.php';
-//// require_once __DIR__ . '/../src/Controllers/RolController.php';
-
-// //Modelos
-//// require_once __DIR__ . '/../src/Models/Cliente.php';
-//// require_once __DIR__ . '/../src/Models/Usuario.php';
-//// require_once __DIR__ . '/../src/Models/Rol.php';
-//// require_once __DIR__ . '/../src/Utils/Response.php';
 
 use App\Routes\Router;
 use App\Config\Database;
@@ -58,20 +74,8 @@ try {
 } catch (Exception $error) {
     http_response_code(500);
     echo json_encode([
-        'error' => true,
+        'success' => false,
         'message' => 'Error interno del servidor',
         'details' => $error->getMessage()
     ]);
-}
-
-// Después del require del autoloader
-spl_autoload_register(function ($class) {
-    error_log("Intentando cargar: " . $class);
-});
-
-// O verifica si la clase ya existe
-if (class_exists('App\Controllers\AuthController')) {
-    error_log("AuthController YA está cargado");
-} else {
-    error_log("AuthController NO está cargado");
 }
