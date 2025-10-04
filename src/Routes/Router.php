@@ -1,12 +1,8 @@
 <?php
-// src/Routes/Router.php
-
 namespace App\Routes;
 
-use App\Controllers\MesaController;
-use App\Controllers\ReservaController;
-use App\Models\HistorialReserva;
 use App\Utils\Response;
+use App\Middlewares\AuthMiddleware;
 
 class Router
 {
@@ -17,96 +13,112 @@ class Router
         $this->defineRoutes();
     }
 
-    // Definir todas las rutas necesarias clientes, mesas etc
     private function defineRoutes()
     {
-        // ==================== AUTENTICACIÓN ====================
-        // Auth para personal del restaurante
-        $this->addRoute('POST', 'auth/login', 'AuthController', 'login');
-        $this->addRoute('POST', 'auth/logout', 'AuthController', 'logout');
-        $this->addRoute('GET', 'auth/me', 'AuthController', 'me');
+        //AUTENTICACIÓN
+        // Auth para personal del restaurante (NO protegidas)
+        $this->addRoute('POST', 'auth/login', 'AuthController', 'login', false);
+        $this->addRoute('POST', 'auth/logout', 'AuthController', 'logout', true);
+        $this->addRoute('GET', 'auth/me', 'AuthController', 'me', true);
 
-        // Auth para clientes
-        $this->addRoute('POST', 'clientes/auth/login', 'ClienteAuthController', 'login');
-        $this->addRoute('POST', 'clientes/auth/logout', 'ClienteAuthController', 'logout');
-        $this->addRoute('GET', 'clientes/auth/me', 'ClienteAuthController', 'me');
-        $this->addRoute('POST', 'clientes/auth/register', 'ClienteAuthController', 'register');
+        // Auth para clientes (login y register NO protegidos)
+        $this->addRoute('POST', 'clientes/auth/login', 'ClienteAuthController', 'login', false);
+        $this->addRoute('POST', 'clientes/auth/logout', 'ClienteAuthController', 'logout', true);
+        $this->addRoute('GET', 'clientes/auth/me', 'ClienteAuthController', 'me', true);
+        $this->addRoute('POST', 'clientes/auth/register', 'ClienteAuthController', 'register', false);
 
-        // ==================== CLIENTES ====================
-        $this->addRoute('GET', 'clientes', 'ClienteController', 'index');
-        $this->addRoute('GET', 'clientes/{id}', 'ClienteController', 'show');
-        $this->addRoute('POST', 'clientes', 'ClienteController', 'store');
-        $this->addRoute('PUT', 'clientes/{id}', 'ClienteController', 'update');
-        $this->addRoute('DELETE', 'clientes/{id}', 'ClienteController', 'delete');
+        //CLIENTES
+        $this->addRoute('GET', 'clientes', 'ClienteController', 'index', true);
+        $this->addRoute('GET', 'clientes/{id}', 'ClienteController', 'show', true);
+        $this->addRoute('POST', 'clientes', 'ClienteController', 'store', true);
+        $this->addRoute('PUT', 'clientes/{id}', 'ClienteController', 'update', true);
+        $this->addRoute('DELETE', 'clientes/{id}', 'ClienteController', 'delete', true);
 
-        // ==================== USUARIOS (PERSONAL) ====================
-        $this->addRoute('GET', 'usuarios', 'UsuarioController', 'index');
-        $this->addRoute('GET', 'usuarios/{id}', 'UsuarioController', 'show');
-        $this->addRoute('POST', 'usuarios', 'UsuarioController', 'store');
-        $this->addRoute('PUT', 'usuarios/{id}', 'UsuarioController', 'update');
-        $this->addRoute('DELETE', 'usuarios/{id}', 'UsuarioController', 'delete');
-        $this->addRoute('GET', 'usuarios/rol/{id_rol}', 'UsuarioController', 'getByRole');
-        $this->addRoute('GET', 'usuarios/buscar/{termino}', 'UsuarioController', 'search');
-        $this->addRoute('GET', 'usuarios/estadisticas/conteo', 'UsuarioController', 'stats');
-        $this->addRoute('PUT', 'usuarios/{id}/cambiar-password', 'UsuarioController', 'changePassword');
-        $this->addRoute('GET', 'usuarios/{id}/perfil', 'UsuarioController', 'profile');
+        //PERFIL
+        $this->addRoute('GET', 'clientes/perfil', 'ClienteController', 'getProfile', true);
+        $this->addRoute('PUT', 'clientes/perfil', 'ClienteController', 'updateProfile', true);
+        $this->addRoute('PUT', 'clientes/cambiar-password', 'ClienteController', 'changePassword', true);
 
-        // ==================== ROLES ====================
-        $this->addRoute('GET', 'roles', 'RolController', 'index');
-        $this->addRoute('GET', 'roles/{id}', 'RolController', 'show');
-        $this->addRoute('POST', 'roles', 'RolController', 'store');
-        $this->addRoute('PUT', 'roles/{id}', 'RolController', 'update');
-        $this->addRoute('DELETE', 'roles/{id}', 'RolController', 'delete');
-        $this->addRoute('GET', 'roles/{id}/usuarios', 'RolController', 'getUserCount');
-        $this->addRoute('GET', 'roles/buscar/{termino}', 'RolController', 'search');
-        $this->addRoute('GET', 'roles/estadisticas/conteo', 'RolController', 'stats');
-        $this->addRoute('GET', 'roles/sistema/lista', 'RolController', 'systemRoles');
+        //USUARIOS (PERSONAL)
+        $this->addRoute('GET', 'usuarios', 'UsuarioController', 'index', true);
+        $this->addRoute('GET', 'usuarios/{id}', 'UsuarioController', 'show', true);
+        $this->addRoute('POST', 'usuarios', 'UsuarioController', 'store', true);
+        $this->addRoute('PUT', 'usuarios/{id}', 'UsuarioController', 'update', true);
+        $this->addRoute('DELETE', 'usuarios/{id}', 'UsuarioController', 'delete', true);
+        $this->addRoute('GET', 'usuarios/rol/{id_rol}', 'UsuarioController', 'getByRole', true);
+        $this->addRoute('GET', 'usuarios/buscar/{termino}', 'UsuarioController', 'search', true);
+        $this->addRoute('GET', 'usuarios/estadisticas/conteo', 'UsuarioController', 'stats', true);
+        $this->addRoute('PUT', 'usuarios/{id}/cambiar-password', 'UsuarioController', 'changePassword', true);
+        $this->addRoute('GET', 'usuarios/{id}/perfil', 'UsuarioController', 'profile', true);
 
-        // ==================== MESAS ====================
-        $this->addRoute('GET', 'mesas', 'MesaController', 'index');
-        $this->addRoute('POST', 'mesas', 'MesaController', 'store');
-        $this->addRoute('GET', 'mesas/{id}', 'MesaController', 'show');
-        $this->addRoute('PUT', 'mesas/{id}', 'MesaController', 'update');
-        $this->addRoute('DELETE', 'mesas/{id}', 'MesaController', 'delete');
-        $this->addRoute('GET', 'mesas/disponibles', 'MesaController', 'getAvailable');
-        $this->addRoute('GET', 'mesas/estadisticas', 'MesaController', 'getStatistics');
-        $this->addRoute('GET', 'mesas/enums', 'MesaController', 'getEnumValues');
-        $this->addRoute('GET', 'mesas/tipo/{tipo}', 'MesaController', 'getByType');
-        $this->addRoute('GET', 'mesas/estado/{estado}', 'MesaController', 'getByStatus');
-        $this->addRoute('PUT', 'mesas/{id}/estado', 'MesaController', 'changeStatus');
-        $this->addRoute('GET', 'mesas/disponibilidad', 'MesaController', 'checkDisponibilidad');
+        //ROLES
+        $this->addRoute('GET', 'roles', 'RolController', 'index', true);
+        $this->addRoute('GET', 'roles/{id}', 'RolController', 'show', true);
+        $this->addRoute('POST', 'roles', 'RolController', 'store', true);
+        $this->addRoute('PUT', 'roles/{id}', 'RolController', 'update', true);
+        $this->addRoute('DELETE', 'roles/{id}', 'RolController', 'delete', true);
+        $this->addRoute('GET', 'roles/{id}/usuarios', 'RolController', 'getUserCount', true);
+        $this->addRoute('GET', 'roles/buscar/{termino}', 'RolController', 'search', true);
+        $this->addRoute('GET', 'roles/estadisticas/conteo', 'RolController', 'stats', true);
+        $this->addRoute('GET', 'roles/sistema/lista', 'RolController', 'systemRoles', true);
 
-        // ==================== RESERVAS ====================
-        $this->addRoute('GET', 'reservas', 'ReservaController', 'index');
-        $this->addRoute('POST', 'reservas', 'ReservaController', 'store');
-        $this->addRoute('GET', 'reservas/{id}', 'ReservaController', 'show');
-        $this->addRoute('PUT', 'reservas/{id}', 'ReservaController', 'update');
-        $this->addRoute('DELETE', 'reservas/{id}', 'ReservaController', 'delete');
-        $this->addRoute('PUT', 'reservas/{id}/cancelar', 'ReservaController', 'cancel');
-        $this->addRoute('GET', 'reservas/{id}/historial', 'ReservaController', 'getHistorial');
-        $this->addRoute('GET', 'reservas/cliente/{id_cliente}', 'ReservaController', 'getByCliente');
-        $this->addRoute('GET', 'reservas/fecha/{fecha}', 'ReservaController', 'getByDate');
-        $this->addRoute('GET', 'reservas/estado/{estado}', 'ReservaController', 'getByStatus');
-        $this->addRoute('PUT', 'reservas/{id}/estado', 'ReservaController', 'changeStatus');
-        $this->addRoute('GET', 'reservas/disponibilidad', 'ReservaController', 'checkAvailability');
+        //MESAS
+        $this->addRoute('GET', 'mesas', 'MesaController', 'index', false); // Pública
+        $this->addRoute('POST', 'mesas', 'MesaController', 'store', true);
+        $this->addRoute('GET', 'mesas/{id}', 'MesaController', 'show', false); // Pública
+        $this->addRoute('PUT', 'mesas/{id}', 'MesaController', 'update', true);
+        $this->addRoute('DELETE', 'mesas/{id}', 'MesaController', 'delete', true);
+        $this->addRoute('GET', 'mesas/disponibles', 'MesaController', 'getAvailable', false); // Pública
+        $this->addRoute('GET', 'mesas/estadisticas', 'MesaController', 'getStatistics', true);
+        $this->addRoute('GET', 'mesas/enums', 'MesaController', 'getEnumValues', false); // Pública
+        $this->addRoute('GET', 'mesas/tipo/{tipo}', 'MesaController', 'getByType', false); // Pública
+        $this->addRoute('GET', 'mesas/estado/{estado}', 'MesaController', 'getByStatus', true);
+        $this->addRoute('PUT', 'mesas/{id}/estado', 'MesaController', 'changeStatus', true);
+        $this->addRoute('GET', 'mesas/disponibilidad', 'MesaController', 'checkDisponibilidad', false); // Pública
 
-        // ==================== HORARIOS ====================
-        $this->addRoute('GET', 'horarios', 'HorarioController', 'index');
-        $this->addRoute('GET', 'horarios/{id}', 'HorarioController', 'show');
-        $this->addRoute('POST', 'horarios', 'HorarioController', 'store');
-        $this->addRoute('PUT', 'horarios/{id}', 'HorarioController', 'update');
-        $this->addRoute('DELETE', 'horarios/{id}', 'HorarioController', 'delete');
-        $this->addRoute('GET', 'horarios/dia/{dia}', 'HorarioController', 'getByDay');
+        //RESERVAS CLIENTES
+        $this->addRoute('GET', 'cliente/reservas/disponibilidad', 'ClienteReservaController', 'checkAvailability', true);
+        $this->addRoute('PUT', 'cliente/reservas/{id}/cancelar', 'ClienteReservaController', 'cancel', true);
+        $this->addRoute('GET', 'cliente/reservas/{id}', 'ClienteReservaController', 'show', true);
+        $this->addRoute('GET', 'cliente/reservas', 'ClienteReservaController', 'index', true);
+        $this->addRoute('POST', 'cliente/reservas', 'ClienteReservaController', 'store', true);
+        $this->addRoute('PUT', 'cliente/reservas/{id}', 'ClienteReservaController', 'update', true);
+
+        //RESERVAS STAFF
+        $this->addRoute('GET', 'staff/reservas/disponibilidad', 'StaffReservaController', 'checkAvailability', true);
+        $this->addRoute('GET', 'staff/reservas/estadisticas', 'StaffReservaController', 'getStats', true);
+        $this->addRoute('GET', 'staff/reservas/pendientes-confirmacion', 'StaffReservaController', 'getPendingConfirmation', true);
+        $this->addRoute('GET', 'staff/reservas', 'StaffReservaController', 'index', true);
+        $this->addRoute('GET', 'staff/reservas/{id}', 'StaffReservaController', 'show', true);
+        $this->addRoute('POST', 'staff/reservas', 'StaffReservaController', 'store', true);
+        $this->addRoute('PUT', 'staff/reservas/{id}', 'StaffReservaController', 'update', true);
+        $this->addRoute('PUT', 'staff/reservas/{id}/cancelar', 'StaffReservaController', 'cancel', true);
+        $this->addRoute('DELETE', 'staff/reservas/{id}', 'StaffReservaController', 'delete', true);
+        $this->addRoute('GET', 'staff/reservas/{id}/historial', 'StaffReservaController', 'getHistorial', true);
+        $this->addRoute('PUT', 'staff/reservas/{id}/estado', 'StaffReservaController', 'changeStatus', true);
+        $this->addRoute('GET', 'staff/reservas/cliente/{id_cliente}', 'StaffReservaController', 'getByCliente', true);
+        $this->addRoute('GET', 'staff/reservas/fecha/{fecha}', 'StaffReservaController', 'getByDate', true);
+        $this->addRoute('GET', 'staff/reservas/estado/{estado}', 'StaffReservaController', 'getByStatus', true);
+        $this->addRoute('GET', 'staff/reservas/proximas', 'StaffReservaController', 'getUpcoming', true);
+
+        //HORARIOS
+        $this->addRoute('GET', 'horarios', 'HorarioController', 'index', false); // Pública
+        $this->addRoute('GET', 'horarios/{id}', 'HorarioController', 'show', false); // Pública
+        $this->addRoute('POST', 'horarios', 'HorarioController', 'store', true);
+        $this->addRoute('PUT', 'horarios/{id}', 'HorarioController', 'update', true);
+        $this->addRoute('DELETE', 'horarios/{id}', 'HorarioController', 'delete', true);
+        $this->addRoute('GET', 'horarios/dia/{dia}', 'HorarioController', 'getByDay', false); // Pública
     }
 
-    // Agregar ruta
-    private function addRoute($method, $path, $controller, $action)
+    // Agregar ruta con parámetro de protección
+    private function addRoute($method, $path, $controller, $action, $protected = false)
     {
         $this->routes[] = [
             'method' => $method,
             'path' => $path,
             'controller' => $controller,
-            'action' => $action
+            'action' => $action,
+            'protected' => $protected
         ];
     }
 
@@ -116,16 +128,28 @@ class Router
         $method = $_SERVER['REQUEST_METHOD'];
         $uri = $this->getUri();
 
-        // Debug temporal - puedes eliminarlo después
-        error_log("Método: $method, URI: '$uri'");
-        error_log("Rutas registradas: " . print_r($this->routes, true));
-
-        // buscar coincidencia con ruta
+         // Buscar coincidencia con ruta
         $route = $this->matchRoute($method, $uri);
 
         if (!$route) {
             Response::notFound('Ruta no encontrada');
             return;
+        }
+
+        // Verificar autenticación si la ruta es protegida
+        if ($route['protected']) {
+            error_log("Router: Ruta protegida, verificando autenticación");
+
+            try {
+                AuthMiddleware::handle();
+                error_log("Router: Autenticación exitosa");
+            } catch (\Exception $e) {
+                error_log("Router: Error de autenticación - " . $e->getMessage());
+                // El middleware ya envió la respuesta, solo salir
+                return;
+            }
+        } else {
+            error_log("Router: Ruta pública, sin verificación de autenticación");
         }
 
         // Ejecutar controlador
@@ -143,12 +167,7 @@ class Router
 
         // Remover el path base de tu proyecto
         $uri = str_replace('/api-sistema-restaurante-g2-v1/public', '', $uri);
-
         $uri = trim($uri, '/');
-
-        // Debug temporal
-        error_log("URI original: " . $_SERVER['REQUEST_URI']);
-        error_log("URI procesada: '$uri'");
 
         return $uri;
     }
@@ -164,10 +183,12 @@ class Router
             $params = $this->matchPath($route['path'], $uri);
 
             if ($params !== false) {
+                error_log("Router: Ruta encontrada - " . $route['path']);
                 return [
                     'controller' => $route['controller'],
                     'action' => $route['action'],
-                    'params' => $params
+                    'params' => $params,
+                    'protected' => $route['protected']
                 ];
             }
         }
@@ -194,6 +215,7 @@ class Router
         $controllerClass = "App\\Controllers\\$controllerName";
 
         if (!class_exists($controllerClass)) {
+            error_log("Router: Controlador no encontrado - $controllerClass");
             Response::error('Controlador no encontrado', 500);
             return;
         }
@@ -201,10 +223,12 @@ class Router
         $controller = new $controllerClass();
 
         if (!method_exists($controller, $action)) {
+            error_log("Router: Método no encontrado - $controllerClass::$action");
             Response::error('Método no encontrado', 500);
             return;
         }
 
+        error_log("Router: Ejecutando $controllerClass::$action");
         call_user_func_array([$controller, $action], $params);
     }
 }
