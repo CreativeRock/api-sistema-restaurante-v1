@@ -16,7 +16,7 @@ $allowed_origins = [
 
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
-// Headers CORS - DEBEN ir al inicio, antes de cualquier output
+// Headers CORS - DEBEN ir al inicio, antes de cualquier outputx
 if (in_array($origin, $allowed_origins)) {
     header("Access-Control-Allow-Origin: $origin");
 } else {
@@ -51,14 +51,6 @@ if (session_status() === PHP_SESSION_NONE) {
     ]);
     session_start();
 }
-
-// Log para debugging
-error_log("=== NUEVA REQUEST ===");
-error_log("URI: " . $_SERVER['REQUEST_URI']);
-error_log("METHOD: " . $_SERVER['REQUEST_METHOD']);
-error_log("ORIGIN: " . ($_SERVER['HTTP_ORIGIN'] ?? 'No origin'));
-error_log("SESSION ID: " . (session_id() ?: 'No session'));
-error_log("CLIENTE ID EN SESSION: " . ($_SESSION['cliente_id'] ?? 'No cliente'));
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
