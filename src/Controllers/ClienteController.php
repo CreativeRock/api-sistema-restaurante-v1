@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Middlewares\AuthMiddleware;
 use App\Models\Cliente;
 use App\Utils\Response;
 use App\Middlewares\ClienteAuthMiddleware;
@@ -38,7 +39,7 @@ class ClienteController extends BaseController
         $currentUser = RolMiddleware::getCurrentUser();
 
         if ($currentUser && in_array($currentUser['rol'], ['Administrador', 'Gerente'])) {
-           //Personal autorizado puede ver cliente
+            //Personal autorizado puede ver cliente
         } else {
             ClienteAuthMiddleware::checkClienteAccess($id);
         }
@@ -197,6 +198,88 @@ class ClienteController extends BaseController
             Response::success(null, 'Cliente eliminado correctamente');
         } catch (\Exception $error) {
             Response::error('Error al eliminar cliente: ', $error->getMessage(), 500);
+        }
+    }
+
+    //Perfil Cliente
+    public function getProfile()
+    {
+        $cliente = AuthMiddleware::getCurrentCliente();
+
+        if (!$cliente) {
+            Response::error('Cliente no autenticado', 401);
+            return;
+        }
+
+        try {
+            $clienteCompleto = $this->clienteModel->getById($cliente['id']);
+
+            if (!$clienteCompleto) {
+                Response::error('Cliente no encontrado', 404);
+                return;
+            }
+
+            // Eliminar información sensible
+            unset($clienteCompleto['password']);
+
+            Response::success($clienteCompleto, 'Perfil obtenido correctamente');
+        } catch (\Exception $error) {
+            Response::error('Error al obtener perfil: ' . $error->getMessage(), 500);
+        }
+    }
+
+    public function updateProfile()
+    {
+        $cliente = AuthMiddleware::getCurrentCliente();
+
+        if (!$cliente) {
+            Response::error('Cliente no autenticado', 401);
+            return;
+        }
+
+        $data = $this->getJsonInput();
+
+        if (!$data) {
+            Response::error('Datos JSON inválidos');
+            return;
+        }
+
+        try {
+            // Campos permitidos para actualizar
+            $allowedFields = ['nombre', 'apellido', 'email', 'telefono', 'preferencias'];
+            $updateData = [];
+
+            foreach ($allowedFields as $field) {
+                if (isset($data[$field])) {
+                    $updateData[$field] = $data[$field];
+                }
+            }
+
+            // Validar email único si se está actualizando
+            if (isset($updateData['email']) && $updateData['email'] !== $cliente['email']) {
+                if ($this->clienteModel->emailExists($updateData['email'])) {
+                    Response::validationError(['email' => 'El email ya está registrado']);
+                    return;
+                }
+            }
+
+            $clienteActualizado = $this->clienteModel->update($cliente['id'], $updateData);
+
+            if (!$clienteActualizado) {
+                Response::error('Error al actualizar perfil');
+                return;
+            }
+
+            // Actualizar datos en sesión
+            $_SESSION['cliente_nombre'] = $clienteActualizado['nombre'] . ' ' . $clienteActualizado['apellido'];
+            $_SESSION['cliente_email'] = $clienteActualizado['email'];
+
+            // Eliminar información sensible
+            unset($clienteActualizado['password']);
+
+            Response::success($clienteActualizado, 'Perfil actualizado correctamente');
+        } catch (\Exception $error) {
+            Response::error('Error al actualizar perfil: ' . $error->getMessage(), 500);
         }
     }
 }
