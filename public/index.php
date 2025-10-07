@@ -46,7 +46,7 @@ session_set_cookie_params([
     'domain' => 'localhost',
     'secure' => false, // false para desarrollo local
     'httponly' => true,
-    'samesite' => 'Lax' // Cambiado de 'None' a 'Lax'
+    'samesite' => 'Lax'
 ]);
 
 // Iniciar sesión DESPUÉS de configurar cookies
