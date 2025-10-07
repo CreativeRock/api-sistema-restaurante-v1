@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Routes;
 
 use App\Utils\Response;
@@ -63,6 +64,7 @@ class Router
         $this->addRoute('GET', 'roles/sistema/lista', 'RolController', 'systemRoles', true);
 
         //MESAS
+        $this->addRoute('GET', 'mesas/disponibilidad', 'MesaController', 'checkDisponibilidad', false); // Pública
         $this->addRoute('GET', 'mesas', 'MesaController', 'index', false); // Pública
         $this->addRoute('POST', 'mesas', 'MesaController', 'store', true);
         $this->addRoute('GET', 'mesas/{id}', 'MesaController', 'show', false); // Pública
@@ -74,7 +76,6 @@ class Router
         $this->addRoute('GET', 'mesas/tipo/{tipo}', 'MesaController', 'getByType', false); // Pública
         $this->addRoute('GET', 'mesas/estado/{estado}', 'MesaController', 'getByStatus', true);
         $this->addRoute('PUT', 'mesas/{id}/estado', 'MesaController', 'changeStatus', true);
-        $this->addRoute('GET', 'mesas/disponibilidad', 'MesaController', 'checkDisponibilidad', false); // Pública
 
         //RESERVAS CLIENTES
         $this->addRoute('GET', 'cliente/reservas/disponibilidad', 'ClienteReservaController', 'checkAvailability', true);
@@ -85,21 +86,22 @@ class Router
         $this->addRoute('PUT', 'cliente/reservas/{id}', 'ClienteReservaController', 'update', true);
 
         //RESERVAS STAFF
+        // ORDEN CORRECTO para staff/reservas
         $this->addRoute('GET', 'staff/reservas/disponibilidad', 'StaffReservaController', 'checkAvailability', true);
         $this->addRoute('GET', 'staff/reservas/estadisticas', 'StaffReservaController', 'getStats', true);
         $this->addRoute('GET', 'staff/reservas/pendientes-confirmacion', 'StaffReservaController', 'getPendingConfirmation', true);
-        $this->addRoute('GET', 'staff/reservas', 'StaffReservaController', 'index', true);
-        $this->addRoute('GET', 'staff/reservas/{id}', 'StaffReservaController', 'show', true);
-        $this->addRoute('POST', 'staff/reservas', 'StaffReservaController', 'store', true);
-        $this->addRoute('PUT', 'staff/reservas/{id}', 'StaffReservaController', 'update', true);
-        $this->addRoute('PUT', 'staff/reservas/{id}/cancelar', 'StaffReservaController', 'cancel', true);
-        $this->addRoute('DELETE', 'staff/reservas/{id}', 'StaffReservaController', 'delete', true);
-        $this->addRoute('GET', 'staff/reservas/{id}/historial', 'StaffReservaController', 'getHistorial', true);
-        $this->addRoute('PUT', 'staff/reservas/{id}/estado', 'StaffReservaController', 'changeStatus', true);
+        $this->addRoute('GET', 'staff/reservas/proximas', 'StaffReservaController', 'getUpcoming', true);
         $this->addRoute('GET', 'staff/reservas/cliente/{id_cliente}', 'StaffReservaController', 'getByCliente', true);
         $this->addRoute('GET', 'staff/reservas/fecha/{fecha}', 'StaffReservaController', 'getByDate', true);
         $this->addRoute('GET', 'staff/reservas/estado/{estado}', 'StaffReservaController', 'getByStatus', true);
-        $this->addRoute('GET', 'staff/reservas/proximas', 'StaffReservaController', 'getUpcoming', true);
+        $this->addRoute('GET', 'staff/reservas', 'StaffReservaController', 'index', true);
+        $this->addRoute('POST', 'staff/reservas', 'StaffReservaController', 'store', true);
+        $this->addRoute('GET', 'staff/reservas/{id}', 'StaffReservaController', 'show', true);
+        $this->addRoute('PUT', 'staff/reservas/{id}', 'StaffReservaController', 'update', true);
+        $this->addRoute('PUT', 'staff/reservas/{id}/cancelar', 'StaffReservaController', 'cancel', true);
+        $this->addRoute('PUT', 'staff/reservas/{id}/estado', 'StaffReservaController', 'changeStatus', true);
+        $this->addRoute('DELETE', 'staff/reservas/{id}', 'StaffReservaController', 'delete', true);
+        $this->addRoute('GET', 'staff/reservas/{id}/historial', 'StaffReservaController', 'getHistorial', true);
 
         //HORARIOS
         $this->addRoute('GET', 'horarios', 'HorarioController', 'index', false); // Pública
@@ -128,7 +130,7 @@ class Router
         $method = $_SERVER['REQUEST_METHOD'];
         $uri = $this->getUri();
 
-         // Buscar coincidencia con ruta
+        // Buscar coincidencia con ruta
         $route = $this->matchRoute($method, $uri);
 
         if (!$route) {
