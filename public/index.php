@@ -3,8 +3,8 @@
 // Configurar sesiones seguras
 ini_set('session.cookie_httponly', 1);
 ini_set('session.use_strict_mode', 1);
-ini_set('session.cookie_samesite', 'None'); // Importante para CORS con credenciales
-ini_set('session.cookie_secure', 0); // 0 para desarrollo local, 1 para producción
+ini_set('session.cookie_samesite', 'Lax'); // Cambiar de 'None' a 'Lax' para desarrollo local
+ini_set('session.cookie_secure', 0); // 0 para desarrollo local
 
 // Lista de orígenes permitidos
 $allowed_origins = [
@@ -16,19 +16,19 @@ $allowed_origins = [
 
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
-// Headers CORS - DEBEN ir al inicio, antes de cualquier outputx
+// Headers CORS - DEBEN ir al inicio, antes de cualquier output
 if (in_array($origin, $allowed_origins)) {
     header("Access-Control-Allow-Origin: $origin");
 } else {
-    // Para desarrollo, puedes permitir el origen actual como fallback
+    // Para desarrollo, permitir el origen actual
     header("Access-Control-Allow-Origin: http://localhost:4200");
 }
 
 header("Access-Control-Allow-Credentials: true");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS, PATCH");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-XSRF-TOKEN, Accept, Origin");
-header("Access-Control-Expose-Headers: Authorization");
-header("Access-Control-Max-Age: 86400"); // 24 horas
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-XSRF-TOKEN, Accept, Origin, Cookie");
+header("Access-Control-Expose-Headers: Authorization, Set-Cookie");
+header("Access-Control-Max-Age: 86400");
 
 // Manejar preflight (OPTIONS) requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -39,16 +39,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // Configuración de headers para requests normales
 header('Content-Type: application/json; charset=utf-8');
 
-// Iniciar sesión DESPUÉS de los headers CORS
+// Configurar cookies de sesión ANTES de iniciar sesión
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => '/',
+    'domain' => 'localhost',
+    'secure' => false, // false para desarrollo local
+    'httponly' => true,
+    'samesite' => 'Lax' // Cambiado de 'None' a 'Lax'
+]);
+
+// Iniciar sesión DESPUÉS de configurar cookies
 if (session_status() === PHP_SESSION_NONE) {
-    session_set_cookie_params([
-        'lifetime' => 0,
-        'path' => '/',
-        'domain' => 'localhost',
-        'secure' => false, // false para desarrollo local
-        'httponly' => true,
-        'samesite' => 'None'
-    ]);
     session_start();
 }
 
