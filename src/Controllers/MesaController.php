@@ -254,12 +254,6 @@ class MesaController extends BaseController
         $tipo = isset($_GET['tipo']) ? $_GET['tipo'] : null;
         $ubicacion = isset($_GET['ubicacion']) ? $_GET['ubicacion'] : null;
 
-        //// DEBUG: Agregar esto temporalmente
-        Debug::log("getAvailable called", $_GET);
-        Debug::log("Capacidad procesada", $capacidad);
-        Debug::log("Tipo procesada", $tipo);
-        Debug::log("Ubicacion procesada", $ubicacion);
-
         // Validar tipo si se proporciona
         if ($tipo && !Mesa::isValidTipo($tipo)) {
             Response::validationError([
@@ -363,55 +357,39 @@ class MesaController extends BaseController
     // GET /mesas/disponibilidad?fecha=2025-09-23&hora=14:00:00&capacidad=4
     public function checkDisponibilidad()
     {
+        $capacidad = $_GET['capacidad'] ?? null;
         $fecha = $_GET['fecha'] ?? null;
         $hora = $_GET['hora'] ?? null;
-        $capacidad = isset($_GET['capacidad']) ? (int)$_GET['capacidad'] : null;
-        $tipo = $_GET['tipo'] ?? null;
-        $ubicacion = $_GET['ubicacion'] ?? null;
 
-        // Validaciones básicas
-        if (!$fecha || !$hora) {
-            Response::error('Parámetros fecha y hora son requeridos');
+        if (!$capacidad || !$fecha || !$hora) {
+            Response::error('Parámetros requeridos: capacidad, fecha y hora');
             return;
         }
 
+        // Validaciones correctas para capacidad (NO para ID de mesa)
+        if (!is_numeric($capacidad) || $capacidad < 1) {
+            Response::error('Capacidad debe ser un número mayor a 0');
+            return;
+        }
+
+        // Validar fecha
         if (!$this->validateDate($fecha)) {
-            Response::error('Formato de fecha inválido (YYYY-MM-DD)');
+            Response::error('Formato de fecha inválido. Use: YYYY-MM-DD');
             return;
         }
 
         if (!$this->validateTime($hora)) {
-            Response::error('Formato de hora inválido (HH:MM:SS)');
+            Response::error('Formato de hora inválido. Use: HH:MM:SS');
             return;
         }
 
         try {
-            // Obtener todas las mesas que cumplan con los filtros
-            $mesas = $this->mesaModel->getAvailableWithFilters($capacidad, $tipo, $ubicacion);
+            // Buscar mesas disponibles por capacidad
+            $mesasDisponibles = $this->mesaModel->getAvailableByCapacity($capacidad, $fecha, $hora);
 
-            $mesasDisponibles = [];
-            $reservaModel = new \App\Models\Reserva();
-
-            foreach ($mesas as $mesa) {
-                $disponible = $reservaModel->checkAvailability(
-                    $mesa['id_mesa'],
-                    $fecha,
-                    $hora
-                );
-
-                if ($disponible) {
-                    $mesasDisponibles[] = $mesa;
-                }
-            }
-
-            Response::success([
-                'mesas_disponibles' => $mesasDisponibles,
-                'total' => count($mesasDisponibles),
-                'fecha' => $fecha,
-                'hora' => $hora
-            ], 'Disponibilidad verificada correctamente');
+            Response::success($mesasDisponibles, 'Mesas disponibles obtenidas correctamente');
         } catch (\Exception $error) {
-            Response::error('Error al verificar disponibilidad: ' . $error->getMessage(), 500);
+            Response::error('Error al obtener mesas disponibles: ' . $error->getMessage(), 500);
         }
     }
 }
