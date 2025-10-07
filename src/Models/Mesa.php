@@ -169,17 +169,31 @@ class Mesa
         return self::TIPOS_VALIDOS;
     }
 
-    //Obtener mesas disponibles por capacidad
-    public function getAvailableByCapacity($capacidad)
+    //Obtener mesas disponibles por capacidad, fecha y hora
+    public function getAvailableByCapacity($capacidad, $fecha, $hora)
     {
-        $sqlQuery = "SELECT id_mesa, numero_mesa, nombre_mesa, caracteristicas, capacidad, ubicacion, estado, tipo FROM mesas WHERE capacidad >= :capacidad AND estado = 'disponible' ORDER BY capacidad ASC, tipo DESC";
+        $sqlQuery = "SELECT m.id_mesa, m.numero_mesa, m.nombre_mesa, m.caracteristicas,
+                        m.capacidad, m.ubicacion, m.estado, m.tipo
+                 FROM mesas m
+                 WHERE m.capacidad >= :capacidad
+                 AND m.estado = 'disponible'
+                 AND m.id_mesa NOT IN (
+                     SELECT r.id_mesa
+                     FROM reservas r
+                     WHERE r.fecha_reserva = :fecha
+                     AND r.hora_reserva = :hora
+                     AND r.estado IN ('pendiente', 'confirmada')
+                 )
+                 ORDER BY m.capacidad ASC, m.tipo DESC";
 
         $queryStatement = $this->dataBase->prepare($sqlQuery);
         $queryStatement->bindParam(':capacidad', $capacidad, PDO::PARAM_INT);
+        $queryStatement->bindParam(':fecha', $fecha);
+        $queryStatement->bindParam(':hora', $hora);
         $queryStatement->execute();
+
         return $queryStatement->fetchAll();
     }
-
     //Obtener mesas por tipo
     public function getByType($tipo)
     {
@@ -229,7 +243,6 @@ class Mesa
         if ($capacidad) {
             $sqlQuery .= " AND capacidad >= :capacidad";
             $params[':capacidad'] = $capacidad;
-
         }
 
         if ($tipo) {
