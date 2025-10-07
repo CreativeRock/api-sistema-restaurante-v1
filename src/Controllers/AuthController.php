@@ -18,9 +18,17 @@ class AuthController extends BaseController
     //POST /auth/login - Iniciar sesión
     public function login()
     {
-
-        //Verificar si la sesiones están iniciadas
+        // Verificar si la sesión ya está iniciada
         if (session_status() === PHP_SESSION_NONE) {
+            // Configurar cookies antes de iniciar sesión
+            session_set_cookie_params([
+                'lifetime' => 86400, // 24 horas
+                'path' => '/',
+                'domain' => 'localhost',
+                'secure' => false,
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]);
             session_start();
         }
 
@@ -38,12 +46,21 @@ class AuthController extends BaseController
                 return;
             }
 
-            //Guardar datos en sesión
+            // Regenerar ID de sesión para prevenir fixation attacks
+            session_regenerate_id(true);
+
+            // Guardar datos en sesión
             $_SESSION['usuario_id'] = $usuario['id_usuario'];
             $_SESSION['usuario_nombre'] = $usuario['nombre'] . ' ' . $usuario['apellido'];
             $_SESSION['usuario_email'] = $usuario['email'];
             $_SESSION['usuario_rol'] = $usuario['nombre_rol'];
             $_SESSION['usuario_rol_id'] = $usuario['id_rol'];
+            $_SESSION['logged_in'] = true;
+            $_SESSION['last_activity'] = time();
+
+            // Log para debugging
+            error_log("Login exitoso - Usuario ID: " . $usuario['id_usuario']);
+            error_log("Session ID: " . session_id());
 
             Response::success([
                 'id' => $usuario['id_usuario'],
@@ -52,9 +69,9 @@ class AuthController extends BaseController
                 'rol' => $usuario['nombre_rol']
             ], 'Login exitoso');
 
-
         } catch (\Exception $error) {
-            Response::error('Error en el login: ', $error->getMessage(), 500);
+            error_log("Error en login: " . $error->getMessage());
+            Response::error('Error en el login: ' . $error->getMessage(), 500);
         }
     }
 
@@ -65,7 +82,18 @@ class AuthController extends BaseController
             session_start();
         }
 
-        //Destruir la sesión
+        // Limpiar datos de sesión
+        $_SESSION = [];
+
+        // Destruir la sesión y cookie
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000,
+                $params["path"], $params["domain"],
+                $params["secure"], $params["httponly"]
+            );
+        }
+
         session_destroy();
 
         Response::success(null, 'Sesión cerrada correctamente');
@@ -74,14 +102,38 @@ class AuthController extends BaseController
     //GET /auth/me - obtener usuario actual
     public function me()
     {
+        // Configurar sesión con los mismos parámetros
         if (session_status() === PHP_SESSION_NONE) {
+            session_set_cookie_params([
+                'lifetime' => 86400,
+                'path' => '/',
+                'domain' => 'localhost',
+                'secure' => false,
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]);
             session_start();
         }
 
-        if (!isset($_SESSION['usuario_id'])) {
+        // Log para debugging
+        error_log("ME endpoint - Session ID: " . session_id());
+        error_log("ME endpoint - Usuario ID en sesión: " . ($_SESSION['usuario_id'] ?? 'NO'));
+
+        if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['logged_in'])) {
+            error_log("ME endpoint - ERROR: No autenticado");
             Response::error('No autenticado', 401);
             return;
         }
+
+        // Verificar si la sesión ha expirado (24 horas)
+        if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > 86400)) {
+            session_destroy();
+            Response::error('Sesión expirada', 401);
+            return;
+        }
+
+        // Actualizar tiempo de actividad
+        $_SESSION['last_activity'] = time();
 
         Response::success([
             'id' => $_SESSION['usuario_id'],
@@ -90,5 +142,4 @@ class AuthController extends BaseController
             'rol' => $_SESSION['usuario_rol']
         ], 'Usuario actual');
     }
-
 }
